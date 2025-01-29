@@ -1,7 +1,7 @@
 import unittest
 
 from app import create_app, db
-from app.models import Comment
+from app.models import Comment, User
 from settings import TestConfig
 
 
@@ -14,10 +14,24 @@ class TestCommentsAPI(unittest.TestCase):
         self.app_context.push()
         db.create_all()
 
+        # create comment
         self.post_id = 'test-post-id'
         self.comment = Comment(post_id=self.post_id, body='Test comment')
         db.session.add(self.comment)
         db.session.commit()
+
+        # create user
+        self.user = User(username='admin',
+                         email='admin@email.com',
+                         is_admin=True)
+        self.user.set_password('admin_password')
+        db.session.add(self.user)
+        db.session.commit()
+
+    def _login_user(self, email='admin@email.com', password='admin_password'):
+        payload = {'email': email, 'password': password}
+        response = self.client.post('/login', json=payload)
+        return response
 
     def tearDown(self):
         db.session.remove()
@@ -46,12 +60,16 @@ class TestCommentsAPI(unittest.TestCase):
         self.assertEqual(len(self.comment.replies), 1)
 
     def test_update_comment(self):
+        self._login_user()
         payload = {'body': 'Test comment updated'}
-        response = self.client.put(f'{self.comment.id}/update', json=payload)
+        response = self.client.put(
+            f'{self.base_url}/{self.comment.id}/update', json=payload)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(self.comment.body, payload['body'])
 
     def test_delete_comment(self):
-        response = self.client.delete(f'{self.comment.id}/delete',)
+        self._login_user()
+        response = self.client.delete(
+            f'{self.base_url}/{self.comment.id}/delete',)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(Comment.query.count(), 0)
