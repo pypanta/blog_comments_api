@@ -1,4 +1,4 @@
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from dataclasses import dataclass
 
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -56,7 +56,7 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     post_id = db.Column(db.String(500), nullable=False, index=True)
     body = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     user_id = db.Column(db.Integer,
                         db.ForeignKey('user.id', ondelete='SET NULL'),
                         nullable=True)
@@ -115,7 +115,7 @@ class Contact(db.Model):
     email = db.Column(db.String(120), index=True)
     subject = db.Column(db.String(120), nullable=True)
     message = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.now(UTC))
+    created_at = db.Column(db.DateTime, default=datetime.now(timezone.utc))
     is_read = db.Column(db.Boolean, default=False)
 
     def __repr__(self):

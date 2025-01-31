@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime, timezone
 
 
 def timesince(created_at):
@@ -8,7 +8,7 @@ def timesince(created_at):
     :param created_at: datetime object representing the past time
     :return: str in the format 'X second/minute/hour/day/week/month/year ago'
     """
-    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
     ago = now - created_at
 
     seconds = ago.total_seconds()

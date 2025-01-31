@@ -16,13 +16,13 @@ def create_token(identity, time_valid=(0, 0, 0, 60)):
     days, hours, minutes, seconds = time_valid
     try:
         payload = {
-            'exp': datetime.datetime.now(datetime.UTC) + datetime.timedelta(
-                                         days=days,
-                                         hours=hours,
-                                         minutes=minutes,
-                                         seconds=seconds
-                                                ),
-            'iat': datetime.datetime.now(datetime.UTC),
+            'exp': datetime.datetime.now(
+                datetime.timezone.utc
+            ) + datetime.timedelta(days=days,
+                                   hours=hours,
+                                   minutes=minutes,
+                                   seconds=seconds),
+            'iat': datetime.datetime.now(datetime.timezone.utc),
             'sub': identity
         }
         return jwt.encode(
@@ -44,7 +44,7 @@ def decode_token(auth_token):
         payload = jwt.decode(auth_token, current_app.config.get('SECRET_KEY'),
                              algorithms='HS256')
         return payload['sub']
-    except jwt.ExpiredSignatureError as e:
+    except jwt.ExpiredSignatureError:
         return False
     except jwt.InvalidTokenError:
         return False
