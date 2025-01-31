@@ -1,9 +1,10 @@
-from flask import jsonify, request, make_response
+from flask import jsonify, make_response, request
 from sqlalchemy.exc import IntegrityError
 
 from app import db
-from app.auth.tokens import token_required, decode_token
+from app.auth.tokens import decode_token, token_required
 from app.models import User
+from app.utils.cookie import delete_cookie, set_cookie
 
 from . import bp
 from .tokens import create_token
@@ -52,27 +53,20 @@ def login():
         (User.email == data.get('email'))
         | (User.username == data.get('email'))
     ).first()
+
     if user is not None:
         if user.check_password(data.get('password')):
             response = make_response()
-            response.set_cookie(
-                key='access',
-                value=create_token(user.email),
-                httponly=True,
-                samesite='Lax',
-                domain='127.0.0.1',
-            )
-            response.set_cookie(
-                key='refresh',
-                value=create_token(user.email, time_valid=(0, 12, 0, 0)),
-                httponly=True,
-                samesite='Lax',
-                domain='127.0.0.1',
-                path='/refresh',
-            )
+            access_token = create_token(user.email)
+            refresh_token = create_token(user.email, time_valid=(0, 12, 0, 0))
+            set_cookie(response, 'access', access_token, (0, 0, 0, 60))
+            set_cookie(response, 'refresh', refresh_token, (0, 12, 0, 0))
+
             if response.status_code == 200:
                 return response
+
         return jsonify({'message': 'Wrong password!'}), 401
+
     return jsonify({'message': 'User not found!'}), 404
 
 
@@ -83,12 +77,8 @@ def logout(*args, **kwargs):
     user = kwargs.get('user')
     if user is not None:
         response = make_response()
-        response.delete_cookie(
-            key='access', httponly=True, path='/', domain='127.0.0.1'
-        )
-        response.delete_cookie(
-            key='refresh', httponly=True, path='/refresh', domain='127.0.0.1'
-        )
+        delete_cookie(response, 'access')
+        delete_cookie(response, 'refresh')
         return response
     return jsonify({'message': 'User not found!'}), 404
 
@@ -129,21 +119,10 @@ def user_update(*args, **kwargs):
         if user.email != email:
             user.email = email
             response = make_response()
-            response.set_cookie(
-                key='access',
-                value=create_token(user.email),
-                httponly=True,
-                samesite='Lax',
-                domain='127.0.0.1',
-            )
-            response.set_cookie(
-                key='refresh',
-                value=create_token(user.email, time_valid=(0, 12, 0, 0)),
-                httponly=True,
-                samesite='Lax',
-                domain='127.0.0.1',
-                path='/refresh',
-            )
+            access_token = create_token(user.email)
+            refresh_token = create_token(user.email, time_valid=(0, 12, 0, 0))
+            set_cookie(response, 'access', access_token, (0, 0, 0, 60))
+            set_cookie(response, 'refresh', refresh_token, (0, 12, 0, 0))
 
         db.session.commit()
 
@@ -167,12 +146,8 @@ def refresh():
 
     if user is not None:
         response = make_response()
-        response.set_cookie(
-            key='access',
-            value=create_token(user.email),
-            httponly=True,
-            domain='127.0.0.1',
-        )
+        access_token = create_token(user.email)
+        set_cookie(response, 'access', access_token, (0, 0, 0, 60))
         return response
 
     return jsonify({'message': 'Unauthorized'}), 401
